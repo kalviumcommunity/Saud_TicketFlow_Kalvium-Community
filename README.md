@@ -1,9 +1,8 @@
-# Saud_TicketFlow_Kalvium-Community
-A full-stack ticket management system built with Next.js, Prisma and PostgreSQL.
+Team Charter — Sprint 1
 
 ## 1. Team Identification
-**Repository Name:** Deepak_SupportDesk_Kalvium-Community
-**Sprint Period:** Sprint 1 (5 Weeks)
+**Repository Name:** Saud_TicketFlow_Kalvium-Community
+**Sprint Duration:** Sprint 1 (20 Days / 4 Weeks)
 
 ---
 
@@ -11,16 +10,16 @@ A full-stack ticket management system built with Next.js, Prisma and PostgreSQL.
 
 | Lane | Assigned Member | Primary Focus | Documented Responsibilities & Code Ownership |
 | :--- | :--- | :--- | :--- |
-| **Lane 1: Frontend & UI State** | **Deepak** | Client-Side Architecture | Single-Ticket Paginated View, Optimistic UI messaging hooks, UI error state & retry handlers. |
-| **Lane 2: Backend API & Auth** | **Saud** | Server API & Security | Express JWT Auth Middleware, RBAC middleware (isAgent, isAdmin), Ticket REST API endpoints. |
+| **Lane 1: Frontend & UI State** | **Saud** | Client-Side Architecture | Single-Ticket Paginated View, Optimistic UI messaging hooks, UI error state & retry handlers. |
+| **Lane 2: Backend API & Auth** | **Deepak** | Server API & Security | Express JWT Auth Middleware, RBAC middleware (isAgent, isAdmin), Ticket REST API endpoints. |
 | **Lane 3: Database & Messaging**| **Supreeth** | Data Layer & Pipeline | Schema setup, database migrations, Reply submission processing, seed scripts. |
 
 ---
 
 ## 3. Communication & Availability
-**Primary Channel:** Slack (#team-payments / Team Channel) & WhatsApp for urgent flags.
-**Core Working Hours:** 9:00 AM – 6:00 PM (SW Block: Daily Standup at 11:00 AM).
-**Communication Rule:** If blocked on a task for more than 30 minutes, raise it in the team chat immediately—do not stay stuck in silence.
+**Primary Channel:** WhatsApp (Group Chat) for real-time discussions, updates, and urgent flags.
+**Core Working Hours:** 1:15 PM – 4:30 PM IST (SW Daily Block & Standups).
+**Communication Rule:** If blocked on a task for more than 30 minutes, raise it in the WhatsApp group immediately—do not stay stuck in silence.
 
 ---
 
