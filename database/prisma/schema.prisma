@@ -1,0 +1,12 @@
+// FreshAgent Hub - Prisma Database Foundation
+// Datasource and generator configuration for PostgreSQL database layer.
+// Domain models and entity relationships will be defined in subsequent issues.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
