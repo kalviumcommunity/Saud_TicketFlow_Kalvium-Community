@@ -1,0 +1,28 @@
+{
+  "name": "freshagent-database",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Database and persistence layer for FreshAgent Hub using Prisma ORM and PostgreSQL",
+  "main": "prisma/seed.ts",
+  "scripts": {
+    "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate",
+    "prisma:format": "prisma format",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "seed": "ts-node prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.4.1",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.19",
+    "prisma": "^6.4.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  }
+}
