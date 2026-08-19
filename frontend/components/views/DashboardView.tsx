@@ -1,6 +1,10 @@
 import React from "react";
 
-export function DashboardView() {
+export function DashboardView({
+  onSelectTicket,
+}: {
+  onSelectTicket?: (id: string) => void;
+}) {
   const stats = [
     {
       label: "My Open Tickets",
@@ -165,6 +169,7 @@ export function DashboardView() {
             {recentTickets.map((ticket) => (
               <div
                 key={ticket.id}
+                onClick={() => onSelectTicket && onSelectTicket(ticket.id)}
                 className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-zinc-800/30 px-2 rounded-lg transition-colors group cursor-pointer"
               >
                 <div className="space-y-1">
