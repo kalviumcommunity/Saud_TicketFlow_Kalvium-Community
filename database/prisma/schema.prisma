@@ -1,6 +1,5 @@
 // FreshAgent Hub - Prisma Database Foundation
-// Datasource and generator configuration for PostgreSQL database layer.
-// Domain models and entity relationships will be defined in subsequent issues.
+// PostgreSQL Database Schema for Authentication, Roles, Tickets, and Replies.
 
 generator client {
   provider = "prisma-client-js"
@@ -9,4 +8,80 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------
+// Enums
+// ------------------------------------------------------
+
+enum Role {
+  AGENT
+  ADMIN
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// ------------------------------------------------------
+// Models
+// ------------------------------------------------------
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      Role     @default(AGENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignedTickets Ticket[] @relation("AgentTickets")
+  customerTickets Ticket[] @relation("CustomerTickets")
+  replies         Reply[]
+
+  @@map("users")
+}
+
+model Ticket {
+  id          String       @id @default(uuid())
+  title       String
+  description String
+  status      TicketStatus @default(OPEN)
+  priority    Priority     @default(MEDIUM)
+  agentId     String?
+  customerId  String?
+  tags        String       @default("[]") // JSON-stringified tag list
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  agent    User?   @relation("AgentTickets", fields: [agentId], references: [id], onDelete: SetNull)
+  customer User?   @relation("CustomerTickets", fields: [customerId], references: [id], onDelete: SetNull)
+  replies  Reply[]
+
+  @@map("tickets")
+}
+
+model Reply {
+  id        String   @id @default(uuid())
+  ticketId  String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("replies")
 }
