@@ -12,13 +12,24 @@ import { SettingsView } from "./views/SettingsView";
 export function SupportShell() {
   const [activeNav, setActiveNav] = useState<NavItem>("dashboard");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+
+  const handleOpenTicket = (ticketId: string) => {
+    setSelectedTicketId(ticketId);
+    setActiveNav("my-tickets");
+  };
 
   const renderMainContent = () => {
     switch (activeNav) {
       case "dashboard":
-        return <DashboardView />;
+        return <DashboardView onSelectTicket={handleOpenTicket} />;
       case "my-tickets":
-        return <MyTicketsView />;
+        return (
+          <MyTicketsView
+            initialSelectedTicketId={selectedTicketId}
+            onClearSelectedTicket={() => setSelectedTicketId(null)}
+          />
+        );
       case "closed-tickets":
         return <ClosedTicketsView />;
       case "search":
@@ -26,7 +37,7 @@ export function SupportShell() {
       case "settings":
         return <SettingsView />;
       default:
-        return <DashboardView />;
+        return <DashboardView onSelectTicket={handleOpenTicket} />;
     }
   };
 

@@ -19,15 +19,25 @@ export interface Ticket {
   createdAt: string;
   updatedAt: string;
   agentId?: string;
+  agentName?: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerCompany?: string;
+  tags?: string[];
+  repliesCount?: number;
+  replies?: Reply[];
 }
 
 export interface Reply {
   id: string;
   ticketId: string;
   userId: string;
+  userName?: string;
+  userRole?: 'AGENT' | 'ADMIN' | 'CUSTOMER';
   content: string;
   createdAt: string;
   isOptimistic?: boolean;
+  isInternal?: boolean;
 }
 
 export interface ApiResponse<T> {
