@@ -48,4 +48,5 @@ If there is a disagreement regarding the project architecture, the team will dis
 
 ### 2. Progress Issues & Blockers
 
-Any delays, blockers, or differences in progress should be openly communicated during the daily standup. Based on the situation, tasks may be redistributed or team members may pair-program to help resolve the issue.
+Any delays, blockers, or differences in progress should be openly communicated during the daily standup.
+Based on the situation, tasks may be redistributed or team members may pair-program to help resolve the issue.
