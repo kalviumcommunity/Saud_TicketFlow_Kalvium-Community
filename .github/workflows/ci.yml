@@ -44,7 +44,7 @@ jobs:
     name: Backend API & Tests
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: postgresql://user:password@localhost:5432/freshagent
+      DATABASE_URL: file:./test.db
 
     steps:
       - name: Checkout repository
