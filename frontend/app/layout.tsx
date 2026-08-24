@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { SupportShell } from "@/components/SupportShell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FreshAgent Hub — Performance-Optimized Support Interface",
-  description: "High-performance customer support agent workspace designed for rapid ticket resolution workflows.",
+  title: "FreshAgent Hub — Ticket Management System",
+  description: "High-performance customer support workspace built with Next.js App Router.",
 };
 
 export default function RootLayout({
@@ -28,7 +29,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-zinc-950 text-zinc-100 font-sans">
-        {children}
+        <SupportShell>{children}</SupportShell>
       </body>
     </html>
   );
