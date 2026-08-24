@@ -4,6 +4,7 @@ import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
 import ticketRoutes from './routes/ticket.routes';
 import { errorHandler } from './middleware/errorHandler';
+import { requestLogger } from './middleware/requestLogger';
 import { NotFoundError } from './utils/errors';
 
 export const createApp = (): Application => {
@@ -14,11 +15,12 @@ export const createApp = (): Application => {
     origin: process.env.CORS_ORIGIN || '*',
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
   }));
 
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  app.use(requestLogger);
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // Route registration
   app.use('/api/health', healthRoutes);

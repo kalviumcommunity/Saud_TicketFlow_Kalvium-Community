@@ -33,11 +33,36 @@ export interface TicketDTO {
   }>;
 }
 
-export interface UpdateTicketInput {
+export interface CreateTicketInput {
+  title: string;
+  description: string;
   status?: TicketStatus;
   priority?: Priority;
   tags?: string[];
   agentId?: string;
+}
+
+export interface UpdateTicketInput {
+  title?: string;
+  description?: string;
+  status?: TicketStatus;
+  priority?: Priority;
+  tags?: string[];
+  agentId?: string;
+}
+
+export interface TicketFilterOptions {
+  status?: TicketStatus;
+  priority?: Priority;
+  search?: string;
+  tag?: string;
+}
+
+export interface AttachmentInput {
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  contentBase64?: string;
 }
 
 export class TicketService {
@@ -50,15 +75,74 @@ export class TicketService {
     }
   }
 
+  static async createTicket(input: CreateTicketInput, user: UserJwtPayload): Promise<TicketDTO> {
+    const assignedAgentId =
+      user.role === 'ADMIN' ? input.agentId || user.id : user.id;
+
+    const created = await prisma.ticket.create({
+      data: {
+        title: input.title.trim(),
+        description: input.description.trim(),
+        status: input.status || 'OPEN',
+        priority: input.priority || 'MEDIUM',
+        agentId: assignedAgentId,
+        tags: JSON.stringify(input.tags || []),
+      },
+      include: {
+        agent: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    return {
+      id: created.id,
+      title: created.title,
+      description: created.description,
+      status: created.status as TicketStatus,
+      priority: created.priority as Priority,
+      agentId: created.agentId,
+      agent: (created as any).agent || null,
+      tags: this.parseTags(created.tags),
+      createdAt: created.createdAt,
+      updatedAt: created.updatedAt,
+    };
+  }
+
   static async getTickets(
     user: UserJwtPayload,
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
+    filters: TicketFilterOptions = {}
   ): Promise<{ tickets: TicketDTO[]; pagination: PaginationMeta }> {
     const skip = (page - 1) * limit;
 
+    const whereCondition: any = {};
+
     // Security Rule: AGENT gets only assigned tickets; ADMIN gets system-wide
-    const whereCondition = user.role === 'ADMIN' ? {} : { agentId: user.id };
+    if (user.role !== 'ADMIN') {
+      whereCondition.agentId = user.id;
+    }
+
+    if (filters.status) {
+      whereCondition.status = filters.status;
+    }
+
+    if (filters.priority) {
+      whereCondition.priority = filters.priority;
+    }
+
+    if (filters.search && filters.search.trim()) {
+      const searchTerm = filters.search.trim();
+      whereCondition.OR = [
+        { title: { contains: searchTerm } },
+        { description: { contains: searchTerm } },
+      ];
+    }
+
+    if (filters.tag && filters.tag.trim()) {
+      whereCondition.tags = { contains: filters.tag.trim() };
+    }
 
     const [total, rawTickets] = await Promise.all([
       prisma.ticket.count({ where: whereCondition }),
@@ -75,14 +159,14 @@ export class TicketService {
       }),
     ]);
 
-    const tickets: TicketDTO[] = rawTickets.map((t) => ({
+    const tickets: TicketDTO[] = rawTickets.map((t: any) => ({
       id: t.id,
       title: t.title,
       description: t.description,
       status: t.status as TicketStatus,
       priority: t.priority as Priority,
       agentId: t.agentId,
-      agent: t.agent,
+      agent: t.agent || null,
       tags: this.parseTags(t.tags),
       createdAt: t.createdAt,
       updatedAt: t.updatedAt,
@@ -123,7 +207,6 @@ export class TicketService {
 
     // Security Rule: AGENT can only access ticket assigned to them
     if (user.role !== 'ADMIN' && ticket.agentId !== user.id) {
-      // Return 404 to avoid leaking existence of unauthorized tickets
       throw new NotFoundError('Ticket not found');
     }
 
@@ -134,11 +217,11 @@ export class TicketService {
       status: ticket.status as TicketStatus,
       priority: ticket.priority as Priority,
       agentId: ticket.agentId,
-      agent: ticket.agent,
+      agent: (ticket as any).agent || null,
       tags: this.parseTags(ticket.tags),
       createdAt: ticket.createdAt,
       updatedAt: ticket.updatedAt,
-      replies: ticket.replies.map((r) => ({
+      replies: (ticket as any).replies?.map((r: any) => ({
         id: r.id,
         ticketId: r.ticketId,
         userId: r.userId,
@@ -168,12 +251,16 @@ export class TicketService {
     }
 
     const updateData: {
+      title?: string;
+      description?: string;
       status?: string;
       priority?: string;
       tags?: string;
       agentId?: string;
     } = {};
 
+    if (input.title) updateData.title = input.title.trim();
+    if (input.description) updateData.description = input.description.trim();
     if (input.status) updateData.status = input.status;
     if (input.priority) updateData.priority = input.priority;
     if (input.tags) updateData.tags = JSON.stringify(input.tags);
@@ -203,15 +290,38 @@ export class TicketService {
       status: updated.status as TicketStatus,
       priority: updated.priority as Priority,
       agentId: updated.agentId,
-      agent: updated.agent,
+      agent: (updated as any).agent || null,
       tags: this.parseTags(updated.tags),
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
     };
   }
 
+  static async deleteTicket(ticketId: string, user: UserJwtPayload): Promise<{ success: boolean; message: string }> {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+    });
+
+    if (!ticket) {
+      throw new NotFoundError('Ticket not found');
+    }
+
+    // Security Rule: AGENT can only delete ticket assigned to them, ADMIN can delete any
+    if (user.role !== 'ADMIN' && ticket.agentId !== user.id) {
+      throw new ForbiddenError('You are not authorized to delete this ticket');
+    }
+
+    await prisma.ticket.delete({
+      where: { id: ticketId },
+    });
+
+    return {
+      success: true,
+      message: 'Ticket deleted successfully',
+    };
+  }
+
   static async getReplies(ticketId: string, user: UserJwtPayload) {
-    // Check ticket exists & authorization
     await this.getTicketById(ticketId, user);
 
     const replies = await prisma.reply.findMany({
@@ -224,7 +334,7 @@ export class TicketService {
       },
     });
 
-    return replies.map((r) => ({
+    return replies.map((r: any) => ({
       id: r.id,
       ticketId: r.ticketId,
       userId: r.userId,
@@ -235,7 +345,6 @@ export class TicketService {
   }
 
   static async createReply(ticketId: string, content: string, user: UserJwtPayload) {
-    // Check ticket exists & authorization
     await this.getTicketById(ticketId, user);
 
     if (!content || !content.trim()) {
@@ -261,7 +370,28 @@ export class TicketService {
       userId: reply.userId,
       content: reply.content,
       createdAt: reply.createdAt,
-      user: reply.user,
+      user: (reply as any).user,
+    };
+  }
+
+  static async addAttachment(
+    ticketId: string,
+    input: AttachmentInput,
+    user: UserJwtPayload
+  ) {
+    await this.getTicketById(ticketId, user);
+
+    const attachmentId = `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+    return {
+      id: attachmentId,
+      ticketId,
+      fileName: input.fileName.trim(),
+      fileType: input.fileType.trim(),
+      fileSize: input.fileSize,
+      url: `/api/tickets/${ticketId}/attachments/${attachmentId}`,
+      uploadedBy: user.id,
+      uploadedAt: new Date(),
     };
   }
 }
