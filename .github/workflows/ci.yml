@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, 'feature/**']
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  database-check:
+    name: Database Layer Validation
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://user:password@localhost:5432/freshagent
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: database/package-lock.json
+
+      - name: Install database dependencies
+        working-directory: database
+        run: npm ci
+
+      - name: Validate Prisma Schema
+        working-directory: database
+        run: npm run prisma:validate
+
+      - name: Generate Prisma Client
+        working-directory: database
+        run: npm run prisma:generate
+
+      - name: Typecheck Database & Seed Scripts
+        working-directory: database
+        run: npx tsc --noEmit
+
+  backend-check:
+    name: Backend API & Tests
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: file:./test.db
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Generate Backend Prisma Client
+        working-directory: backend
+        run: npm run prisma:generate
+
+      - name: Setup test database
+        working-directory: backend
+        run: npx prisma db push --skip-generate
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Run backend tests
+        working-directory: backend
+        run: npm test
+
+  frontend-check:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
