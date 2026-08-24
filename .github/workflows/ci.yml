@@ -65,6 +65,10 @@ jobs:
         working-directory: backend
         run: npm run prisma:generate
 
+      - name: Setup test database
+        working-directory: backend
+        run: npx prisma db push --skip-generate
+
       - name: Build backend
         working-directory: backend
         run: npm run build
