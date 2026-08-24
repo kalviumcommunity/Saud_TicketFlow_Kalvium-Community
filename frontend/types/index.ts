@@ -28,6 +28,14 @@ export interface Ticket {
   replies?: Reply[];
 }
 
+export interface Attachment {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url?: string;
+}
+
 export interface Reply {
   id: string;
   ticketId: string;
@@ -38,10 +46,20 @@ export interface Reply {
   createdAt: string;
   isOptimistic?: boolean;
   isInternal?: boolean;
+  attachments?: Attachment[];
+}
+
+export interface Pagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
+  pagination?: Pagination;
   error?: string;
 }
+

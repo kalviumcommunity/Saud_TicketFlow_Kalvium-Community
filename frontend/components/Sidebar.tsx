@@ -1,48 +1,42 @@
+"use client";
+
 import React from "react";
-import { NavItem } from "./Header";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface SidebarProps {
-  activeNav: NavItem;
-  onSelectNav: (nav: NavItem) => void;
   isMobileOpen: boolean;
   onCloseMobile: () => void;
 }
 
-export function Sidebar({
-  activeNav,
-  onSelectNav,
-  isMobileOpen,
-  onCloseMobile,
-}: SidebarProps) {
-  const navItems: {
-    id: NavItem;
-    label: string;
-    badge?: string;
-    badgeColor?: string;
-    icon: React.ReactNode;
-  }[] = [
+export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps) {
+  const pathname = usePathname();
+
+  const navItems = [
     {
-      id: "dashboard",
+      href: "/",
       label: "Dashboard",
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
         </svg>
       ),
+      exact: true,
     },
     {
-      id: "my-tickets",
+      href: "/tickets",
       label: "My Tickets",
       badge: "4",
       badgeColor: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30",
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 2 0 00-2 2v3a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5z" />
         </svg>
       ),
+      exact: false,
     },
     {
-      id: "closed-tickets",
+      href: "/closed",
       label: "Closed Tickets",
       badge: "12",
       badgeColor: "bg-zinc-800 text-zinc-400 border-zinc-700",
@@ -51,18 +45,20 @@ export function Sidebar({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1a2 2 0 01-2 2M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
         </svg>
       ),
+      exact: true,
     },
     {
-      id: "search",
+      href: "/search",
       label: "Search",
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
       ),
+      exact: true,
     },
     {
-      id: "settings",
+      href: "/settings",
       label: "Settings",
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -70,12 +66,15 @@ export function Sidebar({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
       ),
+      exact: true,
     },
   ];
 
-  const handleSelect = (id: NavItem) => {
-    onSelectNav(id);
-    onCloseMobile();
+  const checkIsActive = (href: string, exact: boolean) => {
+    if (exact) {
+      return pathname === href;
+    }
+    return pathname.startsWith(href);
   };
 
   const renderNavContent = () => (
@@ -87,12 +86,12 @@ export function Sidebar({
           </span>
           <nav className="mt-3 space-y-1">
             {navItems.map((item) => {
-              const isActive = activeNav === item.id;
+              const isActive = checkIsActive(item.href, item.exact);
               return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => handleSelect(item.id)}
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onCloseMobile}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all group ${
                     isActive
                       ? "bg-indigo-600/15 text-indigo-300 font-semibold border border-indigo-500/30 shadow-sm"
@@ -114,7 +113,7 @@ export function Sidebar({
                       {item.badge}
                     </span>
                   )}
-                </button>
+                </Link>
               );
             })}
           </nav>
@@ -126,10 +125,10 @@ export function Sidebar({
         <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-3">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
-            <span className="text-xs font-medium text-zinc-300">Support Desk Shell</span>
+            <span className="text-xs font-medium text-zinc-300">FreshAgent Hub</span>
           </div>
           <p className="text-[11px] text-zinc-400 mt-1">
-            Lane 1 • Frontend Foundation
+            App Router &bull; Module 2 Architecture
           </p>
         </div>
       </div>
