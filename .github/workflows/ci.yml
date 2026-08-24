@@ -10,6 +10,9 @@ jobs:
   database-check:
     name: Database Layer Validation
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://user:password@localhost:5432/freshagent
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -40,6 +43,9 @@ jobs:
   backend-check:
     name: Backend API & Tests
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://user:password@localhost:5432/freshagent
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -70,6 +76,7 @@ jobs:
   frontend-check:
     name: Frontend Build
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
