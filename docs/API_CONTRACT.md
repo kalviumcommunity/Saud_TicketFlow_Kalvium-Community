@@ -98,4 +98,5 @@ The API adheres to standard HTTP status code conventions across all resource are
 ## 5. Contract Stability Notice
 
 > [!NOTE]
-> Detailed JSON schema definitions (field names, data types, pagination query parameters) will be established as feature development begins across Lane 1 (Saud), Lane 2 (Deepak), and Lane 3 (Supreeth). Any updates to this contract must be submitted via PR and approved by the team
+> Detailed JSON schema definitions (field names, data types, pagination query parameters) will be established as feature development begins across Lane 1 (Saud), Lane 2 (Deepak), and Lane 3 (Supreeth). 
+Any updates to this contract must be submitted via PR and approved by the team.
