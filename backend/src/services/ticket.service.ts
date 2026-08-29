@@ -1,9 +1,9 @@
 import { prisma } from '../lib/prisma';
 import { UserJwtPayload } from '../utils/jwt';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../utils/errors';
+import { TicketStatus, Priority } from '@prisma/client';
+export { TicketStatus, Priority };
 
-export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
-export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
 export interface PaginationMeta {
   page: number;
@@ -135,8 +135,8 @@ export class TicketService {
     if (filters.search && filters.search.trim()) {
       const searchTerm = filters.search.trim();
       whereCondition.OR = [
-        { title: { contains: searchTerm } },
-        { description: { contains: searchTerm } },
+        { title: { contains: searchTerm, mode: 'insensitive' } },
+        { description: { contains: searchTerm, mode: 'insensitive' } },
       ];
     }
 
@@ -253,16 +253,16 @@ export class TicketService {
     const updateData: {
       title?: string;
       description?: string;
-      status?: string;
-      priority?: string;
+      status?: TicketStatus;
+      priority?: Priority;
       tags?: string;
-      agentId?: string;
+      agentId?: string | null;
     } = {};
 
     if (input.title) updateData.title = input.title.trim();
     if (input.description) updateData.description = input.description.trim();
-    if (input.status) updateData.status = input.status;
-    if (input.priority) updateData.priority = input.priority;
+    if (input.status) updateData.status = input.status as TicketStatus;
+    if (input.priority) updateData.priority = input.priority as Priority;
     if (input.tags) updateData.tags = JSON.stringify(input.tags);
 
     // Only Admin can reassign tickets

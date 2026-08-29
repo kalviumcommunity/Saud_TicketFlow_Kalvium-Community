@@ -2,49 +2,34 @@ name: CI
 
 on:
   push:
-    branches: [main, develop, 'feature/**']
+    branches: [main, develop, 'feature/**', 'fix/**']
   pull_request:
     branches: [main, develop]
 
 jobs:
-  database-check:
-    name: Database Layer Validation
+  database-and-backend:
+    name: Unified PostgreSQL Database & Backend Validation
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: freshagent_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
-      DATABASE_URL: postgresql://user:password@localhost:5432/freshagent
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: database/package-lock.json
-
-      - name: Install database dependencies
-        working-directory: database
-        run: npm ci
-
-      - name: Validate Prisma Schema
-        working-directory: database
-        run: npm run prisma:validate
-
-      - name: Generate Prisma Client
-        working-directory: database
-        run: npm run prisma:generate
-
-      - name: Typecheck Database & Seed Scripts
-        working-directory: database
-        run: npx tsc --noEmit
-
-  backend-check:
-    name: Backend API & Tests
-    runs-on: ubuntu-latest
-    env:
-      DATABASE_URL: file:./test.db
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/freshagent_test?schema=public
+      JWT_SECRET: ci_test_secret_key_2026_minimum_32_chars
+      NODE_ENV: test
 
     steps:
       - name: Checkout repository
@@ -61,25 +46,64 @@ jobs:
         working-directory: backend
         run: npm ci
 
+      - name: Validate Authoritative Prisma Schema
+        working-directory: backend
+        run: npx prisma validate
+
       - name: Generate Backend Prisma Client
         working-directory: backend
         run: npm run prisma:generate
 
-      - name: Setup test database
+      - name: Run Database Migrations / Schema Push
         working-directory: backend
         run: npx prisma db push --skip-generate
 
-      - name: Build backend
+      - name: Build Backend
         working-directory: backend
         run: npm run build
 
-      - name: Run backend tests
+      - name: Run Backend Tests
         working-directory: backend
         run: npm test
 
-  frontend-check:
-    name: Frontend Build
+  database-standalone-check:
+    name: Database Foundation Validation
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/freshagent_test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: database/package-lock.json
+
+      - name: Install database dependencies
+        working-directory: database
+        run: npm ci
+
+      - name: Validate Standalone Database Schema
+        working-directory: database
+        run: npm run prisma:validate
+
+      - name: Generate Standalone Database Client
+        working-directory: database
+        run: npm run prisma:generate
+
+      - name: Typecheck Database Scripts
+        working-directory: database
+        run: npx tsc --noEmit
+
+  frontend-check:
+    name: Frontend Build Validation
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:5000/api
 
     steps:
       - name: Checkout repository

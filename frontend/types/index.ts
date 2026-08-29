@@ -20,6 +20,7 @@ export interface Ticket {
   updatedAt: string;
   agentId?: string;
   agentName?: string;
+  agent?: { id: string; name: string; email: string } | null;
   customerName?: string;
   customerEmail?: string;
   customerCompany?: string;
