@@ -1,10 +1,11 @@
 import { Ticket, Reply, Pagination, Attachment } from "@/types";
 import { INITIAL_MOCK_TICKETS } from "@/lib/mockData";
+import { api } from "./client";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-
-// In-memory fallback data store initialized with mock tickets
+// In-memory fallback data store for explicit offline/demo mode only
 let fallbackTicketsStore: Ticket[] = JSON.parse(JSON.stringify(INITIAL_MOCK_TICKETS));
+
+const USE_DEMO_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 export interface GetTicketsParams {
   status?: string;
@@ -15,23 +16,44 @@ export interface GetTicketsParams {
 }
 
 /**
- * Helper to construct authorization headers if a token is present
+ * Format raw backend ticket response DTO into frontend Ticket interface.
  */
-function getHeaders(): HeadersInit {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+function mapBackendTicket(t: any): Ticket {
+  const replies = Array.isArray(t.replies)
+    ? t.replies.map((r: any) => ({
+        id: r.id,
+        ticketId: r.ticketId,
+        userId: r.userId,
+        userName: r.user?.name || "Support User",
+        userRole: r.user?.role || "AGENT",
+        content: r.content,
+        createdAt: typeof r.createdAt === "string" ? r.createdAt : new Date(r.createdAt).toISOString(),
+        isInternal: r.isInternal || false,
+      }))
+    : [];
+
+  return {
+    id: t.id,
+    title: t.title,
+    description: t.description,
+    status: t.status,
+    priority: t.priority,
+    createdAt: typeof t.createdAt === "string" ? t.createdAt : new Date(t.createdAt).toISOString(),
+    updatedAt: typeof t.updatedAt === "string" ? t.updatedAt : new Date(t.updatedAt).toISOString(),
+    agentId: t.agentId || undefined,
+    agentName: t.agent?.name || (t.agentId ? "Assigned Agent" : "Unassigned"),
+    agent: t.agent || null,
+    customerName: t.customerName || "Customer User",
+    customerEmail: t.customerEmail || "customer@example.com",
+    customerCompany: t.customerCompany || "Enterprise Client",
+    tags: Array.isArray(t.tags) ? t.tags : typeof t.tags === "string" ? JSON.parse(t.tags || "[]") : [],
+    repliesCount: replies.length,
+    replies,
   };
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("freshagent_token");
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-  }
-  return headers;
 }
 
 /**
- * Fetch list of tickets from backend with query parameters and fallback to mock store.
+ * Fetch list of tickets from backend REST API.
  */
 export async function getTickets(params: GetTicketsParams = {}): Promise<{
   tickets: Ticket[];
@@ -39,24 +61,24 @@ export async function getTickets(params: GetTicketsParams = {}): Promise<{
 }> {
   const { status, priority, search, page = 1, limit = 10 } = params;
 
-  try {
-    const query = new URLSearchParams();
-    if (status && status !== "ALL") query.append("status", status);
-    if (priority && priority !== "ALL") query.append("priority", priority);
-    if (search) query.append("search", search);
-    query.append("page", page.toString());
-    query.append("limit", limit.toString());
+  if (!USE_DEMO_MOCK) {
+    try {
+      const query = new URLSearchParams();
+      if (status && status !== "ALL") query.append("status", status);
+      if (priority && priority !== "ALL") query.append("priority", priority);
+      if (search) query.append("search", search);
+      query.append("page", page.toString());
+      query.append("limit", limit.toString());
 
-    const response = await fetch(`${API_BASE_URL}/tickets?${query.toString()}`, {
-      headers: getHeaders(),
-      cache: "no-store",
-    });
+      const result = await api.get<{
+        success: boolean;
+        data: any[];
+        pagination: Pagination;
+      }>(`/tickets?${query.toString()}`);
 
-    if (response.ok) {
-      const result = await response.json();
       if (result.success && Array.isArray(result.data)) {
         return {
-          tickets: result.data,
+          tickets: result.data.map(mapBackendTicket),
           pagination: result.pagination || {
             total: result.data.length,
             page,
@@ -65,12 +87,15 @@ export async function getTickets(params: GetTicketsParams = {}): Promise<{
           },
         };
       }
+    } catch (error) {
+      if (typeof window !== "undefined") {
+        throw error;
+      }
+      console.warn("Server build fetch failed, returning initial ticket payload:", error);
     }
-  } catch (error) {
-    console.warn("Backend API unavailable, using fallback mock store:", error);
   }
 
-  // Fallback filtering & pagination logic
+  // Fallback filtering & pagination logic for SSR build / demo mode
   let filtered = [...fallbackTicketsStore];
 
   if (status && status !== "ALL") {
@@ -92,8 +117,7 @@ export async function getTickets(params: GetTicketsParams = {}): Promise<{
         t.id.toLowerCase().includes(q) ||
         t.title.toLowerCase().includes(q) ||
         t.description.toLowerCase().includes(q) ||
-        (t.customerName && t.customerName.toLowerCase().includes(q)) ||
-        (t.customerCompany && t.customerCompany.toLowerCase().includes(q))
+        (t.customerName && t.customerName.toLowerCase().includes(q))
     );
   }
 
@@ -117,52 +141,46 @@ export async function getTickets(params: GetTicketsParams = {}): Promise<{
  * Fetch a single ticket by ID.
  */
 export async function getTicketById(id: string): Promise<Ticket | null> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/tickets/${id}`, {
-      headers: getHeaders(),
-      cache: "no-store",
-    });
-
-    if (response.ok) {
-      const result = await response.json();
+  if (!USE_DEMO_MOCK) {
+    try {
+      const result = await api.get<{ success: boolean; data: any }>(`/tickets/${id}`);
       if (result.success && result.data) {
-        return result.data;
+        return mapBackendTicket(result.data);
+      }
+      return null;
+    } catch (error) {
+      if (typeof window !== "undefined") {
+        throw error;
       }
     }
-  } catch (error) {
-    console.warn(`Backend API failed for getTicketById(${id}), using fallback store`, error);
   }
 
-  // Fallback search
   const found = fallbackTicketsStore.find((t) => t.id === id);
   return found ? JSON.parse(JSON.stringify(found)) : null;
 }
 
 /**
- * Update ticket properties (status, priority, tags, etc.)
+ * Update ticket properties (status, priority, tags, title, description, etc.)
  */
 export async function updateTicket(
   id: string,
   updates: Partial<Ticket>
 ): Promise<Ticket> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/tickets/${id}`, {
-      method: "PATCH",
-      headers: getHeaders(),
-      body: JSON.stringify(updates),
-    });
+  if (!USE_DEMO_MOCK) {
+    const payload: any = {};
+    if (updates.status) payload.status = updates.status;
+    if (updates.priority) payload.priority = updates.priority;
+    if (updates.title) payload.title = updates.title;
+    if (updates.description) payload.description = updates.description;
+    if (updates.tags) payload.tags = updates.tags;
+    if (updates.agentId) payload.agentId = updates.agentId;
 
-    if (response.ok) {
-      const result = await response.json();
-      if (result.success && result.data) {
-        return result.data;
-      }
+    const result = await api.patch<{ success: boolean; data: any }>(`/tickets/${id}`, payload);
+    if (result.success && result.data) {
+      return mapBackendTicket(result.data);
     }
-  } catch (error) {
-    console.warn(`Backend API failed for updateTicket(${id}), using fallback store`, error);
   }
 
-  // Fallback update
   const index = fallbackTicketsStore.findIndex((t) => t.id === id);
   if (index !== -1) {
     fallbackTicketsStore[index] = {
@@ -185,34 +203,35 @@ export async function createReply(
   attachments: Attachment[] = [],
   isInternal: boolean = false
 ): Promise<Reply> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/replies`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify({ content, message: content, isInternal }),
+  if (!USE_DEMO_MOCK) {
+    const result = await api.post<{ success: boolean; data: any }>(`/tickets/${ticketId}/replies`, {
+      content,
+      message: content,
+      isInternal,
     });
 
-    if (response.ok) {
-      const result = await response.json();
-      if (result.success && result.data) {
-        const replyWithAttachments = {
-          ...result.data,
-          attachments,
-        };
-        return replyWithAttachments;
-      }
+    if (result.success && result.data) {
+      const r = result.data;
+      return {
+        id: r.id,
+        ticketId: r.ticketId,
+        userId: r.userId,
+        userName: r.user?.name || "Agent User",
+        userRole: r.user?.role || "AGENT",
+        content: r.content,
+        createdAt: typeof r.createdAt === "string" ? r.createdAt : new Date(r.createdAt).toISOString(),
+        isInternal,
+        attachments,
+      };
     }
-  } catch (error) {
-    console.warn(`Backend API failed for createReply(${ticketId}), using fallback store`, error);
   }
 
-  // Fallback store reply creation
   const newReply: Reply = {
     id: `rpl-${Date.now().toString().slice(-4)}`,
     ticketId,
     userId: "usr-agent-01",
     userName: "Agent Alex",
-    userRole: isInternal ? "AGENT" : "AGENT",
+    userRole: "AGENT",
     content,
     createdAt: new Date().toISOString(),
     isInternal,
@@ -236,34 +255,29 @@ export async function createReply(
 export async function createTicket(
   ticketData: Omit<Ticket, "id" | "createdAt" | "updatedAt" | "replies">
 ): Promise<Ticket> {
-  const newId = `TCK-${Math.floor(1000 + Math.random() * 9000)}`;
-  const now = new Date().toISOString();
+  if (!USE_DEMO_MOCK) {
+    const payload = {
+      title: ticketData.title,
+      description: ticketData.description,
+      status: ticketData.status || "OPEN",
+      priority: ticketData.priority || "MEDIUM",
+      tags: ticketData.tags || [],
+    };
+
+    const result = await api.post<{ success: boolean; data: any }>("/tickets", payload);
+    if (result.success && result.data) {
+      return mapBackendTicket(result.data);
+    }
+  }
 
   const newTicket: Ticket = {
-    id: newId,
+    id: `TCK-${Math.floor(1000 + Math.random() * 9000)}`,
     ...ticketData,
-    createdAt: now,
-    updatedAt: now,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     repliesCount: 0,
     replies: [],
   };
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/tickets`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(newTicket),
-    });
-
-    if (response.ok) {
-      const result = await response.json();
-      if (result.success && result.data) {
-        return result.data;
-      }
-    }
-  } catch (error) {
-    console.warn("Backend API failed for createTicket, using fallback store", error);
-  }
 
   fallbackTicketsStore.unshift(newTicket);
   return newTicket;

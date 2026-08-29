@@ -1,8 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { getStoredUser, logout } from "@/lib/api/auth";
+import { User } from "@/types";
+import { LogOut, User as UserIcon, LogIn } from "lucide-react";
 
 export type NavItem = "dashboard" | "my-tickets" | "closed-tickets" | "search" | "settings";
 
@@ -13,6 +16,11 @@ interface HeaderProps {
 export function Header({ onToggleMobileSidebar }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    setCurrentUser(getStoredUser());
+  }, []);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -21,6 +29,23 @@ export function Header({ onToggleMobileSidebar }: HeaderProps) {
         router.push(`/search?q=${encodeURIComponent(target.value.trim())}`);
       }
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    setCurrentUser(null);
+    router.push("/login");
+    router.refresh();
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return "US";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .substring(0, 2)
+      .toUpperCase();
   };
 
   return (
@@ -71,22 +96,39 @@ export function Header({ onToggleMobileSidebar }: HeaderProps) {
         </div>
       </div>
 
-      {/* Right side: Status Badge & Profile Badge */}
+      {/* Right side: Status Badge & Profile / Logout */}
       <div className="flex items-center gap-3">
         <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 border border-emerald-500/20">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-          App Router Active
+          PostgreSQL Active
         </span>
 
-        <div className="flex items-center gap-2 pl-2 border-l border-zinc-800">
-          <div className="h-8 w-8 rounded-full bg-indigo-900/60 border border-indigo-500/30 flex items-center justify-center text-indigo-300 font-semibold text-xs">
-            AA
+        {currentUser ? (
+          <div className="flex items-center gap-3 pl-2 border-l border-zinc-800">
+            <div className="h-8 w-8 rounded-full bg-indigo-900/60 border border-indigo-500/30 flex items-center justify-center text-indigo-300 font-semibold text-xs">
+              {getInitials(currentUser.name)}
+            </div>
+            <div className="hidden lg:flex flex-col text-left">
+              <span className="text-xs font-medium text-zinc-200">{currentUser.name}</span>
+              <span className="text-[10px] text-zinc-400 uppercase tracking-wider">{currentUser.role}</span>
+            </div>
+            <button
+              onClick={handleLogout}
+              title="Sign Out"
+              className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors ml-1"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
-          <div className="hidden lg:flex flex-col text-left">
-            <span className="text-xs font-medium text-zinc-200">Agent Alex</span>
-            <span className="text-[10px] text-zinc-400">Support Lead</span>
-          </div>
-        </div>
+        ) : (
+          <Link
+            href="/login"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition"
+          >
+            <LogIn className="w-3.5 h-3.5" />
+            <span>Sign In</span>
+          </Link>
+        )}
       </div>
     </header>
   );
